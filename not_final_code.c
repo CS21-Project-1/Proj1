@@ -26,7 +26,7 @@ int main() {
         return 1;
     }
 
-    FILE *symbol_file = fopen("symboltable.txt", "a");
+    FILE *symbol_file = fopen("symboltable.txt", "w");
     if (symbol_file == NULL) {
         fprintf(stderr, "Error creating symboltable.txt\n");
         fclose(file);
@@ -49,17 +49,27 @@ int main() {
             printf("Line %d: %s", i + 1, line); // Debug print
             //fprintf(symbol_file,"%s",line);
             // Skip lines that don't contain MIPS instructions
-            if (strstr(line, ".") == NULL) {
+            if (strstr(line, ".") == NULL) {   //CHECKS IF ITS NOT .text
                 // Check if the line has a label
+            
+                if (strstr(line, ":")!=NULL) // MEANING THAT IT IS A LABEL
+                {
                 char *token = strtok(line, ":");
-                if (strcmp(token, "leonard") == 0||strcmp(token, "sturgis") == 0 || strcmp(token, "cooper") == 0) {
+               
+                    
                     strcpy(symbol_table[symbol_count].symbol, token);
                     sprintf(symbol_table[symbol_count].address, "0x%08x", address);
-                    printf("Address 0x%08x\n", address); // Print address for MIPS instruction line
-                    printf("Symbol: %s, Address: %s\n", symbol_table[symbol_count].symbol, symbol_table[symbol_count].address);
+                    
+                    //printf("Symbol: %s, Address: %s\n", symbol_table[symbol_count].symbol, symbol_table[symbol_count].address); print Symbol 
                     symbol_count++;
-                }
+                
+                printf("Address 0x%08x\n", address); // Print address for MIPS instruction line
                 address += 4; // Increment address by 4 for each instruction
+                }
+                else{
+                     printf("Address 0x%08x\n", address); // Print address for MIPS instruction line
+                address += 4; // Increment address by 4 for each instruction
+                }
             }
         } else {
             fprintf(stderr, "Error reading line %d\n", i + 1);

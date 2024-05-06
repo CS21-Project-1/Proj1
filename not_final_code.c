@@ -62,7 +62,6 @@ int main() {
                     char *close_parenthesis = NULL;
 
                     if ((start = strstr(line, "print_str(")) != NULL ||
-                        (start = strstr(line, "read_str(")) != NULL ||
                         (start = strstr(line, "print_integer(")) != NULL ||
                         (start = strstr(line, "read_integer(")) != NULL) {
                         // Find the opening parenthesis
@@ -75,8 +74,22 @@ int main() {
                                 size_t length = close_parenthesis - open_parenthesis - 1;
                                 // Allocate memory for the substring
                                 char *substring = malloc(length + 1);
-                                if (substring != NULL) {
-                                    // Copy the substring into the allocated memory
+                                // Copy the substring into the allocated memory
+                                    strncpy(substring, open_parenthesis + 1, length);
+                                    substring[length] = '\0'; // Null-terminate the string
+                                    // Print or use the extracted substring
+
+                                int isDuplicate = 0;
+                                for (int j = 0; j < symbol_count; j++) {
+                                    if (strcmp(symbol_table[j].symbol, substring) == 0) {
+                                        isDuplicate = 1;
+                                        break;
+                                    }
+                                }
+
+                                // Add the symbol to the symbol table only if it's not a duplicate
+                                if (isDuplicate != 1 && substring!=NULL) {
+                                     // Copy the substring into the allocated memory
                                     strncpy(substring, open_parenthesis + 1, length);
                                     substring[length] = '\0'; // Null-terminate the string
                                     // Print or use the extracted substring
@@ -84,9 +97,13 @@ int main() {
                                     // Add your actions here
                                     strcpy(symbol_table[symbol_count].symbol, substring);
                                     sprintf(symbol_table[symbol_count].address, "0x%08x", macro_address);
+                                    
+                                    //printf("%d",isDuplicate);
+                                    //printf("%s",symbol_table[0].symbol);
                                     // Don't forget to free the allocated memory when done
                                     free(substring);
                                 }
+                               
                             }
                         }
                     }
@@ -183,22 +200,10 @@ int main() {
         }
     }
 
-// Output the symbol table to symboltable.txt, skipping duplicates
-for (int i = 0; i < symbol_count; i++) {
-    int isDuplicate = 0;
-    // Check if the current symbol is a duplicate
-    for (int j = i + 1; j < symbol_count; j++) {
-        if (strcmp(symbol_table[i].symbol, symbol_table[j].symbol) == 0) {
-            isDuplicate = 1;
-            break;
-        }
-    }
-    // Print the symbol only if it's not a duplicate
-    if (!isDuplicate) {
+    // Output the symbol table to symboltable.txt
+    for (int i = 0; i < symbol_count; i++) {
         fprintf(symbol_file, "%s\t%s\n", symbol_table[i].symbol, symbol_table[i].address);
     }
-}
-
 
     printf("Symbol table generated and saved as symboltable.txt\n");
 

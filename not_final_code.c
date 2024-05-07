@@ -10,9 +10,10 @@ typedef struct {
     char address[MAX_LINE_LENGTH];
 } SymbolEntry;
 
-
 int main() {
     FILE *file;
+    FILE *symbol_file;
+    FILE *execute_file;
     char filename[] = "mips.txt";
     char line[MAX_LINE_LENGTH];
     int num_lines;
@@ -23,23 +24,27 @@ int main() {
 
     
     // Open the file
-    file = fopen(filename, "r");
-    if (file == NULL) {
+    if ((file = fopen(filename, "r")) == NULL) {
         fprintf(stderr, "Error opening file %s\n", filename);
         return 1;
     }
 
-    FILE *symbol_file = fopen("symboltable.txt", "w");
-    if (symbol_file == NULL) {
+    if ((symbol_file = fopen("symboltable.txt", "w")) == NULL) {
         fprintf(stderr, "Error creating symboltable.txt\n");
         fclose(file);
         return 1;
     }
 
+    if((execute_file = fopen("execute.txt", "w")) == NULL) {
+        fprintf(stderr, "Error creating execute.txt\n");
+        fclose(file);
+        fclose(symbol_file);
+        return 1;
+    }
+
     // Read the number of lines
-    if (fgets(line, MAX_LINE_LENGTH, file) != NULL) {
-        num_lines = atoi(line);
-    } else {
+    if (fgets(line, MAX_LINE_LENGTH, file) != NULL) num_lines = atoi(line);
+    else {
         fprintf(stderr, "Error reading number of lines\n");
         fclose(file);
         fclose(symbol_file);
@@ -49,10 +54,14 @@ int main() {
     // Read and process each line of MIPS code
     for (int i = 0; i < num_lines; i++) {
         if (fgets(line, MAX_LINE_LENGTH, file) != NULL) {
+            if(*line == '\n') {
+                i--;
+                continue;
+            } // Ignores white spaces or lines with just newline
             printf("Line %d: %s", i + 1, line); // Debug print
             //fprintf(symbol_file,"%s",line);
             // Skip lines that don't contain MIPS instructions
-            if (strstr(line, ".") == NULL) {   //CHECKS IF ITS NOT .text
+            if (strstr(line, ".") == NULL) {   //CHECKS IF ITS NOT .text or .data
                 
                 /// THIS CHECKS IF THERE IS A MACRO AND EXTRACTS THE PARAMETER ///
                 if (strstr(line, "print_str")!=NULL || strstr(line, "print_integer")!=NULL || strstr(line, "read_integer")!=NULL) // Contains a macro
@@ -107,17 +116,17 @@ int main() {
                             }
                         }
                     }
-                /// CHECKS FOR MACRO AND EXTRACTS PARAMETER///
+                    /// CHECKS FOR MACRO AND EXTRACTS PARAMETER///
                 
                 
                     
                     
-                //printf("Symbol: %s, Address: %s\n", symbol_table[symbol_count].symbol, symbol_table[symbol_count].address); print Symbol 
-                symbol_count++;
-                
-                printf("Address 0x%08x\n", macro_address); // Print address for MIPS instruction line
-                macro_address += 4; // Increment address by 4 for each instruction
-                address+=4;
+                    //printf("Symbol: %s, Address: %s\n", symbol_table[symbol_count].symbol, symbol_table[symbol_count].address); print Symbol 
+                    symbol_count++;
+                    
+                    printf("Address 0x%08x\n", macro_address); // Print address for MIPS instruction line
+                    macro_address += 4; // Increment address by 4 for each instruction
+                    address+=4;
                 }
 
                 else if (strstr(line, "read_str")!=NULL) // IF MACRO IS READ_STR//
@@ -209,6 +218,7 @@ int main() {
 
     // Close files
     fclose(symbol_file);
+    fclose(execute_file);
     fclose(file);
 
     return 0;

@@ -6,7 +6,11 @@
 #include <stdbool.h>
 
 #define MAX_LENGTH 1000
+#define MAX_SYMBOLS 100
+#define MAX_CHAR 32
 #define SYSCALL 0x00000000
+#define TEXTMACROS 6
+#define DATAMACROS 2
 
 typedef enum LINESTATE {
     LS_NONE = 0,
@@ -51,14 +55,14 @@ typedef struct MACRO {
 }MACRO;
 
 typedef struct SYMBOL{
-    char *symbol;
-    char *address;
+    char symbol[MAX_CHAR];
+    int address;
 }SYMBOL;
 
 int32_t Registers[32];
 LOGLEVEL gLogLevel;
 
-void CloseFiles(FILE *mips_fptr, FILE *sym_fptr, FILE *exe_fptr, FILE *logs_fptr);
+void CloseFiles(void);
 void LogMessage(LOGLEVEL LogLevel, char* Message, ...);
 bool isTextMacro(char Line[MAX_LENGTH]);
 bool isDataMacro(char Line[MAX_LENGTH]);

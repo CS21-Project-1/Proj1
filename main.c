@@ -1,23 +1,25 @@
 #include "macros.c"
 
 FILE *logs_fptr = NULL;
+FILE *mips_fptr = NULL;
+FILE *sym_fptr = NULL;
+FILE *exe_fptr = NULL;
+SYMBOL *SymbolTable[MAX_SYMBOLS];
 
 int main() {
-    FILE *mips_fptr = NULL;
-    FILE *sym_fptr = NULL;
-    FILE *exe_fptr = NULL;
-    SYMBOL **SymbolTable;
     LINETYPE LineState = LS_NONE;
     char Line[MAX_LENGTH];
     int SymbolCount = 0;
     int num_lines = 0;
     int program_counter = 0;
     int data_counter = 0;
-    gLogLevel = LL_ALL; // Enables logging
+    int macro_counter = 0;
+    gLogLevel = LL_INFO; // Enables logging
 
     // For logging purposes
     if(gLogLevel != LL_NONE) {
         if((logs_fptr = fopen("project.log", "w")) == NULL) {
+            printf("Failed to create log file.\n");
             goto Exit;
         }
     } else remove("project.log");
@@ -36,7 +38,6 @@ int main() {
         goto Exit;
     }
     LogMessage(LL_INFO, "[%s] Successfully opened files.\n", __FUNCTION__);
-
     // Read the number of lines
     if(fgets(Line, MAX_LENGTH, mips_fptr) != NULL) {
         num_lines = atoi(Line);
@@ -60,35 +61,49 @@ int main() {
             Line[LineLen] = Line[LineLen] == '\n' ? '\0' : Line[LineLen];
 
             if(strstr(Line, ".include")) {
-                LogMessage(LL_DEBUG, "[%s] %d\t %s\n", __FUNCTION__, i + 1, Line);
+                LogMessage(LL_INFO, "[%s][%d] %s\n", __FUNCTION__, i + 1, Line);
                 LineState = LS_INCLUDE;
                 continue;
             }
             if(strstr(Line, ".text")) {
-                LogMessage(LL_DEBUG, "[%s] %d\t %s\n", __FUNCTION__, i + 1, Line);
+                LogMessage(LL_INFO, "[%s][%d] %s\n", __FUNCTION__, i + 1, Line);
                 LineState = LS_TEXT;
                 continue;
             }
             if(strstr(Line, ".data")) {
-                LogMessage(LL_DEBUG, "[%s] %d\t %s\n", __FUNCTION__, i + 1, Line);
+                LogMessage(LL_INFO, "[%s][%d] %s\n", __FUNCTION__, i + 1, Line);
                 LineState = LS_DATA;
                 continue;
             }
 
             if(LineState == LS_TEXT) {
-                LogMessage(LL_DEBUG, "[%s] %d\t 0x%08x\t %s\n", __FUNCTION__, i + 1, PC_ADDRESS + (program_counter * 4), Line);
-                // Checks if it's a macro and extract the parameter
+                LogMessage(LL_INFO, "[%s][%d] 0x%08x\t %s\n", __FUNCTION__, i + 1, PC_ADDRESS + (program_counter * 4), Line);
+                
+                // Check if there's a label and extract the label
                 if(isLabel(Line)) {
-                    char *label = NULL, *temp = (char*)malloc(sizeof(char)*LineLen);
-                    strcpy_s(temp, sizeof(char), Line);
-                    printf("%s\n", temp);
+                    char *label = NULL, temp[MAX_LENGTH] = {'\0'};
+                    strcpy_s(temp, sizeof(temp), Line);
                     label = ExtractLabel(temp);
+                    SYMBOL *Label = (SYMBOL*)malloc(sizeof(SYMBOL));
+                    strcpy_s(Label->symbol, sizeof(Label->symbol), label);
+                    Label->address = PC_ADDRESS + (program_counter * 4);
+                    SymbolTable[SymbolCount] = Label;
+                    SymbolCount++;
                 }
                 
+                // Checks if it's a macro and extract the parameter
                 if(isTextMacro(Line)) {
-                    char *argument = NULL;
-                    argument = ExtractArgument(Line);
+                    char *argument = NULL, temp[MAX_LENGTH] = {'\0'};
+                    strcpy_s(temp, sizeof(temp), Line);
+                    argument = ExtractArgument(temp);
+                    SYMBOL *TextMacro = (SYMBOL*)malloc(sizeof(SYMBOL));
+                    strcpy_s(TextMacro->symbol, sizeof(TextMacro->symbol), argument);
+                    TextMacro->address = MACRO_ADDRESS + (macro_counter * 4);
+                    SymbolTable[SymbolCount] = TextMacro;
+                    SymbolCount++;
+                    macro_counter++;
                 }
+
                 program_counter++;
             }
         }
@@ -98,13 +113,17 @@ int main() {
         }
     }
 
+    for(int i = 0; i < SymbolCount; i++) {
+        fprintf(sym_fptr, "%s\t 0x%08x\n", SymbolTable[i]->symbol, SymbolTable[i]->address);
+    }
+
     Exit:
 
-    CloseFiles(mips_fptr, sym_fptr, exe_fptr, logs_fptr);
+    CloseFiles();
     return 0;
 }
 
-void CloseFiles(FILE *mips_fptr, FILE *sym_fptr, FILE *exe_fptr, FILE *logs_fptr) {
+void CloseFiles(void) {
     if(mips_fptr) fclose(mips_fptr);
     if(sym_fptr) fclose(sym_fptr);
     if(exe_fptr) fclose(exe_fptr);
@@ -145,7 +164,7 @@ void LogMessage(LOGLEVEL LogLevel, char* Message, ...) {
 }
 
 bool isTextMacro(char Line[MAX_LENGTH]) {
-    for(int i = 0; i < _countof(TextMacros); i++) {
+    for(int i = 0; i < TEXTMACROS; i++) {
         if(strstr(Line, TextMacros[i]->name) != NULL)
             return true;
     }
@@ -153,7 +172,7 @@ bool isTextMacro(char Line[MAX_LENGTH]) {
 }
 
 bool isDataMacro(char Line[MAX_LENGTH]) {
-    for(int i = 0; i < _countof(DataMacros); i++) {
+    for(int i = 0; i < DATAMACROS; i++) {
         if(strstr(Line, DataMacros[i]->name) != NULL)
             return true;
     }

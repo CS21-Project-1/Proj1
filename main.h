@@ -62,10 +62,11 @@ typedef struct SYMBOL{
 int32_t Registers[32];
 LOGLEVEL gLogLevel;
 
-void CloseFiles(void);
-void LogMessage(LOGLEVEL LogLevel, char* Message, ...);
 bool isTextMacro(char Line[MAX_LENGTH]);
 bool isDataMacro(char Line[MAX_LENGTH]);
 bool isLabel(char Line[MAX_LENGTH]);
+bool isDuplicate(char *symbol);
 char *ExtractArgument(char *Line);
 char *ExtractLabel(char *Line);
+void CloseFiles(void);
+void LogMessage(LOGLEVEL LogLevel, char* Message, ...);

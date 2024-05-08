@@ -5,11 +5,11 @@ FILE *mips_fptr = NULL;
 FILE *sym_fptr = NULL;
 FILE *exe_fptr = NULL;
 SYMBOL *SymbolTable[MAX_SYMBOLS];
+uint32_t SymbolCount = 0;
 
 int main() {
     LINETYPE LineState = LS_NONE;
     char Line[MAX_LENGTH];
-    int SymbolCount = 0;
     int num_lines = 0;
     int program_counter = 0;
     int data_counter = 0;
@@ -84,11 +84,14 @@ int main() {
                     char *label = NULL, temp[MAX_LENGTH] = {'\0'};
                     strcpy_s(temp, sizeof(temp), Line);
                     label = ExtractLabel(temp);
-                    SYMBOL *Label = (SYMBOL*)malloc(sizeof(SYMBOL));
-                    strcpy_s(Label->symbol, sizeof(Label->symbol), label);
-                    Label->address = PC_ADDRESS + (program_counter * 4);
-                    SymbolTable[SymbolCount] = Label;
-                    SymbolCount++;
+
+                    if(!isDuplicate(label) && label != NULL) {
+                        SYMBOL *Label = (SYMBOL*)malloc(sizeof(SYMBOL));
+                        strcpy_s(Label->symbol, sizeof(Label->symbol), label);
+                        Label->address = PC_ADDRESS + (program_counter * 4);
+                            SymbolTable[SymbolCount] = Label;
+                            SymbolCount++;
+                    }
                 }
                 
                 // Checks if it's a macro and extract the parameter
@@ -96,12 +99,19 @@ int main() {
                     char *argument = NULL, temp[MAX_LENGTH] = {'\0'};
                     strcpy_s(temp, sizeof(temp), Line);
                     argument = ExtractArgument(temp);
-                    SYMBOL *TextMacro = (SYMBOL*)malloc(sizeof(SYMBOL));
-                    strcpy_s(TextMacro->symbol, sizeof(TextMacro->symbol), argument);
-                    TextMacro->address = MACRO_ADDRESS + (macro_counter * 4);
-                    SymbolTable[SymbolCount] = TextMacro;
-                    SymbolCount++;
-                    macro_counter++;
+                    char *arg1 = strtok(argument, ",");
+                    char *arg2 = strtok(NULL, "");
+
+                    if(arg1) {
+                        if(!isDuplicate(arg1)) {
+                            SYMBOL *TextMacro = (SYMBOL*)malloc(sizeof(SYMBOL));
+                            strcpy_s(TextMacro->symbol, sizeof(TextMacro->symbol), arg1);
+                            TextMacro->address = DATA_ADDRESS + (data_counter * 4);
+                                SymbolTable[SymbolCount] = TextMacro;
+                                SymbolCount++;
+                                data_counter++;
+                        }
+                    }
                 }
 
                 program_counter++;
@@ -121,6 +131,51 @@ int main() {
 
     CloseFiles();
     return 0;
+}
+
+bool isTextMacro(char Line[MAX_LENGTH]) {
+    for(int i = 0; i < TEXTMACROS; i++) {
+        if(strstr(Line, TextMacros[i]->name) != NULL)
+            return true;
+    }
+    return false;
+}
+
+bool isDataMacro(char Line[MAX_LENGTH]) {
+    for(int i = 0; i < DATAMACROS; i++) {
+        if(strstr(Line, DataMacros[i]->name) != NULL)
+            return true;
+    }
+    return false;
+}
+
+bool isLabel(char Line[MAX_LENGTH]) {
+    if(strstr(Line, ":") != NULL) return true;
+    return false;
+}
+
+bool isDuplicate(char *symbol) {
+    for(int i = 0; i < SymbolCount; i++) {
+        if(strstr(SymbolTable[i]->symbol, symbol)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+char *ExtractArgument(char *Line) {
+    char *substring = NULL;
+    substring = strtok(Line, "(");
+    substring = strtok(NULL, ")");
+    LogMessage(LL_DEBUG, "[%s] Argument: %s\n", __FUNCTION__, substring);
+    return substring; 
+}
+
+char *ExtractLabel(char *Line) {
+    char *substring = NULL;
+    substring = strtok(Line, ":");
+    LogMessage(LL_DEBUG, "[%s] Label: %s\n", __FUNCTION__, substring);
+    return substring;
 }
 
 void CloseFiles(void) {
@@ -161,40 +216,4 @@ void LogMessage(LOGLEVEL LogLevel, char* Message, ...) {
     va_end(ArgPointer);
 
     fprintf(logs_fptr, "%s%s", SeverityString, FormattedString);
-}
-
-bool isTextMacro(char Line[MAX_LENGTH]) {
-    for(int i = 0; i < TEXTMACROS; i++) {
-        if(strstr(Line, TextMacros[i]->name) != NULL)
-            return true;
-    }
-    return false;
-}
-
-bool isDataMacro(char Line[MAX_LENGTH]) {
-    for(int i = 0; i < DATAMACROS; i++) {
-        if(strstr(Line, DataMacros[i]->name) != NULL)
-            return true;
-    }
-    return false;
-}
-
-bool isLabel(char Line[MAX_LENGTH]) {
-    if(strstr(Line, ":") != NULL) return true;
-    return false;
-}
-
-char *ExtractArgument(char *Line) {
-    char *substring = NULL;
-    substring = strtok(Line, "(");
-    substring = strtok(NULL, ")");
-    LogMessage(LL_DEBUG, "[%s] Argument: %s\n", __FUNCTION__, substring);
-    return substring; 
-}
-
-char *ExtractLabel(char *Line) {
-    char *substring = NULL;
-    substring = strtok(Line, ":");
-    LogMessage(LL_DEBUG, "[%s] Label: %s\n", __FUNCTION__, substring);
-    return substring;
 }

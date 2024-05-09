@@ -98,7 +98,7 @@ int main() {
                 if(isTextMacro(Line)) {
                     char *argument = NULL, temp[MAX_LENGTH] = {'\0'};
                     strcpy_s(temp, sizeof(temp), Line);
-                    argument = ExtractArgument(temp);
+                    argument = ExtractArgument(temp);  ///////// 
                     char *arg1 = strtok(argument, ",");
                     char *arg2 = strtok(NULL, "");
 
@@ -121,11 +121,98 @@ int main() {
             LogMessage(LL_ERROR, "[%s] Failed to read Line %d.\n", __FUNCTION__, i + 1);
             goto Exit;
         }
+
+
+    //Execute.txt
+    if(isLabel(Line)) //IF LINE HAS LABEL
+    {
+        fprintf(exe_fptr, "%s\n",Line);
+        //Extract line
+        char *Line_without_label;
+        char *colon_pos =strchr(Line, ':');
+
+        if (colon_pos!= NULL)
+        {
+            Line_without_label=colon_pos+2;
+        }
+
+    
+        //Extract operands
+        char *instruction;
+        char *operands;
+
+        char *space_pos=strchr(Line_without_label,' ');
+
+        if (space_pos!=NULL){
+            *space_pos='\0';
+            instruction=Line_without_label;
+            operands=space_pos+1;
+        }
+    
+        //Separate parameters
+        char *tok=strtok(operands,",");
+        char operand_array[3][10];
+        int operand_count=0;
+        
+        while (tok!=0)
+        {
+            strcpy(operand_array[operand_count], tok);
+            operand_count++;
+
+            tok=strtok(0,",");
+        }
+
+        //print operands
+        for (int i = 0; i < operand_count; i++) {
+            printf("Operand %d: %s\n", i + 1, operand_array[i]);
+        }
+    }
+
+    else //IF LINE IS NOT A LABEL
+    {
+        fprintf(exe_fptr, "%s\n",Line);
+        //Extract operands
+        char *instruction;
+        char *operands;
+
+        char *space_pos=strchr(Line,' ');
+
+        if (space_pos!=NULL){
+            *space_pos='\0';
+            instruction=Line;
+            operands=space_pos+1;
+        }
+
+        //printf("%s\n",operands);
+
+        //Separate parameters
+        char *tok=strtok(operands,",");
+        char operand_array[3][10];
+        int operand_count=0;
+        
+        while (tok!=0)
+        {
+            strcpy(operand_array[operand_count], tok);
+            operand_count++;
+
+            tok=strtok(0,",");
+        }
+
+        //print operands
+        for (int i = 0; i < operand_count; i++) {
+            printf("Operand %d: %s\n", i + 1, operand_array[i]);
+        }
+    }
+
+
+     
     }
 
     for(int i = 0; i < SymbolCount; i++) {
         fprintf(sym_fptr, "%s\t 0x%08x\n", SymbolTable[i]->symbol, SymbolTable[i]->address);
     }
+
+    
 
     Exit:
 
